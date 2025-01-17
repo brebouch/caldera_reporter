@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firewall Test Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 95%;
+            margin: auto;
+        }
+        .button-container {
+            margin-bottom: 20px;
+        }
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+        iframe {
+            width: 100%;
+            height: 500px;
+            border: 1px solid #ccc;
+            margin-bottom: 20px;
+        }
+        .disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .input-field {
+            display: inline-block;
+            margin: 10px;
+        }
+    </style>
+    <!-- Include jsPDF and html2canvas libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Firewall Test Tool</h1>
+        <div class="button-container" id="dynamic-content">
+            <!-- Button and input elements will be dynamically inserted here -->
+        </div>
+        <div id="iframe-content">
+            <!-- Iframes will be dynamically inserted here -->
+        </div>
+    </div>
+    <script>
+        async function fetchJSON(url) {
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`Error: ${response.status}`);
+                return await response.json();
+            } catch (err) {
+                console.error(err);
+                return null;
+            }
+        }
+
+        async function fileExists(url) {
+            try {
+                const response = await fetch(url, { method: "HEAD" });
+                return response.ok;
+            } catch {
+                return false;
+            }
+        }
+
+        async function sendPost(url, body) {
+            try {
+                const response = await fetch(url, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(body),
+                });
+                return await response.json();
+            } catch (err) {
+                console.error(err);
+                return null;
+            }
+        }
+
+        async function checkStatus(url) {
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`Error: ${response.status}`);
+                return await response.json();
+            } catch (err) {
+                console.error(err);
+                return null;
+            }
+        }
+
+        async function reloadPage() {
+            location.reload();
+        }
+
+        async function handleRunTest(apiEndpoint, testType, operationName) {
+            if (!operationName) {
+                alert("Please enter a valid operation name.");
+                return;
+            }
+
+            const runButton = document.querySelector(`button[data-test-type="${testType}"]`);
+            runButton.classList.add('disabled');
+            runButton.disabled = true;
+
+            const result = await sendPost(`${apiEndpoint}/api/operation`, {
+                "name": operationName,
+                "adversary": { "adversary_id": "89d971f4-fab8-4c15-bc8f-d64b26728c81" },
+                "group": "",
+                "auto_close": "true",
+                "test_type": testType
+            });
+
+            if (result && result.id) {
+                let polls = 0;
+                let startTime = Date.now();
+                const checkInterval = setInterval(async () => {
+                    const status = await checkStatus(`${apiEndpoint}/api/operation=${result.id}/`);
+                    polls++;
+                    const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2);
+
+                    const dynamicContent = document.getElementById("dynamic-content");
+                    dynamicContent.querySelector('.poll-info').innerText =
+                        `Polling: ${polls} times, Elapsed Time: ${elapsedTime}s`;
+
+                    if (status && status.state === "finished") {
+                        clearInterval(checkInterval);
+                        reloadPage();
+                    }
+                }, 3000);
+            }
+        }
+
+        async function handleReset(apiEndpoint) {
+            await fetch(`${apiEndpoint}/api/reset`, { method: "GET" });
+            reloadPage();
+        }
+
+        async function importRun(apiEndpoint, testType) {
+            const selectedRun = document.getElementById('previous-runs').value;
+            if (selectedRun) {
+                try {
+                    const url = `${apiEndpoint}/api/operation/${selectedRun}?run_type=${testType}`;
+                    const runDetails = await fetchJSON(url);
+                    if (runDetails) {
+                        console.log(`Run Details:`, runDetails);
+                        // Populate any required fields or process the data as needed
+                    } else {
+                        console.log("No details found for the selected run.");
+                    }
+                } catch (err) {
+                    console.error("Error fetching run details:", err);
+                }
+            }
+            reloadPage();
+        }
+
+        async function concatenateAndSavePDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            const initialIframe = document.querySelector('iframe[src="initial_test.html"]');
+            const finalIframe = document.querySelector('iframe[src="final_test.html"]');
+
+            if (initialIframe && finalIframe) {
+                const initialContent = initialIframe.contentWindow.document.body;
+                const finalContent = finalIframe.contentWindow.document.body;
+
+                // Capture initial content
+                await html2canvas(initialContent).then(canvas => {
+                    const imgData = canvas.toDataURL('image/png');
+                    doc.addImage(imgData, 'PNG', 10, 10, 190, 0);
+                });
+
+                doc.addPage();
+
+                // Capture final content
+                await html2canvas(finalContent).then(canvas => {
+                    const imgData = canvas.toDataURL('image/png');
+                    doc.addImage(imgData, 'PNG', 10, 10, 190, 0);
+                });
+
+                doc.save('TestResults.pdf');
+            } else {
+                alert("Both tests must be completed to generate a PDF.");
+            }
+        }
+
+        async function initializePage() {
+            const dynamicContent = document.getElementById("dynamic-content");
+            const iframeContent = document.getElementById("iframe-content");
+            const config = await fetchJSON("/config.json");
+            const initialExists = await fileExists("initial_test.html");
+            const finalExists = await fileExists("final_test.html");
+
+            if (config && config.api_endpoint) {
+                const apiEndpoint = config.api_endpoint;
+
+                let htmlContent = `<div class="poll-info"></div>`;
+
+                if (!initialExists && !finalExists) {
+                    htmlContent += `
+                        <p>Initial state detected. Enter a name and start the initial test.</p>
+                        <div class="input-field">
+                            <input type="text" id="operation-name-initial" placeholder="Operation Name" required>
+                        </div>
+                        <button data-test-type="initial_test" onclick="handleRunTest('${apiEndpoint}', 'initial_test', document.getElementById('operation-name-initial').value)">Start Test</button>
+                        <select id="previous-runs">
+                            <option value="">Select a previous run</option>
+                        </select>
+                        <button id="import-button" onclick="importRun('${apiEndpoint}', 'initial_test')">Import Initial Run</button>
+                    `;
+                } else if (initialExists && !finalExists) {
+                    iframeContent.innerHTML = `<iframe src="initial_test.html"></iframe>`;
+                    htmlContent += `
+                        <p>Initial test completed. Enter a name and proceed with the final testing or reset.</p>
+                        <div class="input-field">
+                            <input type="text" id="operation-name-final" placeholder="Operation Name" required>
+                        </div>
+                        <button data-test-type="final_test" onclick="handleRunTest('${apiEndpoint}', 'final_test', document.getElementById('operation-name-final').value)">Final Testing</button>
+                        <button onclick="handleReset('${apiEndpoint}')">Reset</button>
+                        <select id="previous-runs">
+                            <option value="">Select a previous run</option>
+                        </select>
+                        <button id="import-button" onclick="importRun('${apiEndpoint}', 'final_test')">Import Final Run</button>
+                    `;
+                } else if (initialExists && finalExists) {
+                    iframeContent.innerHTML = `
+                        <iframe src="initial_test.html"></iframe>
+                        <iframe src="final_test.html"></iframe>
+                    `;
+                    htmlContent += `
+                        <p>Both tests completed. You can reset if needed.</p>
+                        <button onclick="handleReset('${apiEndpoint}')">Reset</button>
+                        <button onclick="concatenateAndSavePDF()">Save as PDF</button>
+                    `;
+                } else {
+                    htmlContent += `<p>Error: Unexpected state detected. Please check your setup.</p>`;
+                }
+                dynamicContent.innerHTML = htmlContent;
+
+                // Ensure the dropdown is populated regardless of the test state
+                const operations = await fetchJSON(`${apiEndpoint}/api/operation`);
+                const previousRunsDropdown = document.getElementById('previous-runs');
+                if (operations && previousRunsDropdown) {
+                    operations.forEach(op => {
+                        const option = document.createElement('option');
+                        option.value = op.id;
+                        option.textContent = `Run ${op.id} - ${op.name}`;
+                        previousRunsDropdown.appendChild(option);
+                    });
+                }
+            } else {
+                dynamicContent.innerHTML = `<p>Error: Unable to load API endpoint configuration. Please check config.json.</p>`;
+            }
+        }
+
+        // Initialize the page on load
+        initializePage();
+    </script>
+</body>
+</html>
