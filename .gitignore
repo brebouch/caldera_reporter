@@ -8,7 +8,9 @@
 .idea/**/usage.statistics.xml
 .idea/**/dictionaries
 .idea/**/shelf
-
+.test_env
+dcloud.py
+database.py
 # AWS User-specific
 .idea/**/aws.xml
 
@@ -230,7 +232,7 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-.env
+.test_env
 .venv
 env/
 venv/
@@ -269,3 +271,4 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
+/fmc/

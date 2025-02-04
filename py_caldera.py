@@ -10,19 +10,20 @@ import os
 
 import dotenv
 import requests
-from json2html import *
 
 dotenv.load_dotenv()
 
-base_url = 'http://198.18.128.193:8888/api/v2'
+caldera_server = os.environ.get('CALDERA_SERVER')
+
+base_url = f'{caldera_server}:8888/api/v2'
 
 waiting_responses = []
 
 
 STATUS_CODES = {
-    0: 'Success',
-    1: 'Fail',
-    124: 'Timeout'
+    0: 'Fail',
+    1: 'Pass',
+    124: 'Pass'
 }
 
 
@@ -30,40 +31,100 @@ def get_header():
     return {
         'KEY': os.environ.get('API_TOKEN'),
         'Content-Type': 'application/json',
-        'Acccept': 'application/json'
+        'Accept': 'application/json'
     }
 
 
 def rest_get(endpoint, **kwargs):
+    # Construct the base URL with the endpoint
     url = f'{base_url}/{endpoint}'
-    response = requests.get(url, headers=get_header(), verify=False)
-    if response.status_code == 200:
-        return response.json()
+
+    # Check if there are any keyword arguments to add as query parameters
+    if kwargs:
+        # Append query parameters to the URL
+        query_params = '&'.join([f"{key}={value}" for key, value in kwargs.items()])
+        url = f"{url}?{query_params}"
+
+    # Make the GET request with the constructed URL
+    return requests.get(url, headers=get_header(), verify=False)
 
 
 def rest_delete(endpoint, **kwargs):
+    # Construct the base URL with the endpoint
     url = f'{base_url}/{endpoint}'
-    response = requests.delete(url, headers=get_header(), verify=False)
-    if response.status_code == 200:
-        return response.json()
+
+    # Append query parameters if any
+    if kwargs:
+        query_params = '&'.join([f"{key}={value}" for key, value in kwargs.items()])
+        url = f"{url}?{query_params}"
+
+    # Make the DELETE request with the constructed URL
+    return requests.delete(url, headers=get_header(), verify=False)
+
+
+def rest_head(endpoint, **kwargs):
+    # Construct the base URL with the endpoint
+    url = f'{base_url}/{endpoint}'
+
+    # Check if there are any keyword arguments to add as query parameters
+    if kwargs:
+        # Append query parameters to the URL
+        query_params = '&'.join([f"{key}={value}" for key, value in kwargs.items()])
+        url = f"{url}?{query_params}"
+
+    # Make the GET request with the constructed URL
+    return requests.head(url, headers=get_header(), verify=False)
 
 
 def rest_post(endpoint, data, **kwargs):
+    # Construct the base URL with the endpoint
     url = f'{base_url}/{endpoint}'
+
+    # Append query parameters if any
+    if kwargs:
+        query_params = '&'.join([f"{key}={value}" for key, value in kwargs.items()])
+        url = f"{url}?{query_params}"
+
+    # Ensure data is a dictionary
     if not isinstance(data, dict):
         data = {}
-    response = requests.post(url, json=data, headers=get_header(), verify=False)
-    if response.status_code == 200:
-        return response.json()
+
+    # Make the POST request with the constructed URL and data
+    return requests.post(url, json=data, headers=get_header(), verify=False)
 
 
 def rest_put(endpoint, data, **kwargs):
+    # Construct the base URL with the endpoint
     url = f'{base_url}/{endpoint}'
+
+    # Append query parameters if any
+    if kwargs:
+        query_params = '&'.join([f"{key}={value}" for key, value in kwargs.items()])
+        url = f"{url}?{query_params}"
+
+    # Ensure data is a dictionary
     if not isinstance(data, dict):
         data = {}
-    response = requests.put(url, json=data, headers=get_header(), verify=False)
-    if response.status_code == 200:
-        return response.json()
+
+    # Make the PUT request with the constructed URL and data
+    return requests.put(url, json=data, headers=get_header(), verify=False)
+
+
+def rest_patch(endpoint, data, **kwargs):
+    # Construct the base URL with the endpoint
+    url = f'{base_url}/{endpoint}'
+
+    # Append query parameters if any
+    if kwargs:
+        query_params = '&'.join([f"{key}={value}" for key, value in kwargs.items()])
+        url = f"{url}?{query_params}"
+
+    # Ensure data is a dictionary
+    if not isinstance(data, dict):
+        data = {}
+
+    # Make the PUT request with the constructed URL and data
+    return requests.patch(url, json=data, headers=get_header(), verify=False)
 
 
 def run_operation(name, adversary_id, group='', auto_close='true'):
@@ -78,6 +139,12 @@ def run_operation(name, adversary_id, group='', auto_close='true'):
     op = rest_post('operations', operation)
     if op:
         waiting_responses.append(op)
+        with open('new_operation.json', 'w') as json_writer:
+            json_writer.write(json.dumps(op))
+    for w in waiting_responses:
+        report = get_operation_report(w['id'], True)
+        print('hi')
+
 
 
 def get_operation_report(operation_id, enable_agent_output=False):
@@ -123,22 +190,6 @@ def normalize_report_json(report_json):
     return result, successful
 
 
-def generate_report_html(report_json, run_type):
-    cleaned_steps, successful = normalize_report_json(report_json)
-    output = (f'<html><head><link rel="stylesheet" href="index.css"></head>'
-              f'<body><h2>Operation Name: {report_json["name"]}</h2>')
-    output += f'<h4>Start Time: {report_json["start"]}</h4>'
-    output += f'<h4>End Time: {report_json["finish"]}</h4>'
-    output += f'<h4>Percent Success: {successful}%</h4>'
-    for c in cleaned_steps.values():
-        output += json2html.convert(json=c, table_attributes="id=\"test-results\" "
-                                                             "colgroup_attributes=style=\"max-width: 50%;\"")
-        output += '<br>'
-    output += '</body></html>'
-    report_path = f'{os.getcwd()}/static/{run_type}.html'
-    with open(report_path, 'w') as report_writer:
-        report_writer.write(output)
-
 
 def check_operation_run(operation_id, run_type):
     checkup = rest_get(f'operations/{operation_id}')
@@ -154,8 +205,12 @@ def check_operation_run(operation_id, run_type):
             if checkup['state'] == 'finished':
                 # Add reference to completed operation but not in error state
                 report = get_operation_report(operation_id, True)
+                with open('complete_operation.json', 'w') as json_writer:
+                    json_writer.write(json.dumps(report))
                 generate_report_html(report, run_type)
     return checkup
+
+
 
 
 if __name__ == '__main__':

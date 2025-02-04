@@ -1,0 +1,40 @@
+[{
+    "id": {"rel": "self", "href": "/api/sessions/419377"},
+    "links": [{"rel": "parentDemo", "href": "/api/contents/402031"}],
+    "relevance": 0,
+    "sessionUuid": "30c97a40-16f0-4cb0-8f86-43af29e65229",
+    "guid": "SJC-SES-419377",
+    "canReset": false,
+    "event": null,
+    "name": "FY25 - Cisco Secure Firewall Ignite Roadshow Lab -  22 Jan - NGFW1234 upgraded to 7.6, Caldera ubuntu setup complete - Caldera team testing",
+    "type": "demo",
+    "owner": "apsanghi",
+    "uid": 419377,
+    "status": 4,
+    "parentId": 402031,
+    "anyconnectAllowed": true,
+    "endpointAllowed": true,
+    "stop": "2025-01-28T21:00:00Z",
+    "start": "2025-01-22T16:46:26Z",
+    "updated": "2025-01-24T08:20:13Z",
+    "published": "2025-01-23T03:20:55Z",
+    "activeId": 402181,
+    "errorState": false,
+    "canRequestExtension": false,
+    "virtualCenter": 10,
+    "saveEnabled": true,
+    "parentDemoName": "FY25 - Cisco Secure Firewall Ignite Roadshow Lab -  22 Jan - NGFW1234 upgraded to 7.6, Caldera ubuntu setup complete",
+    "scenario": null,
+    "contentPoolName": null,
+    "contentPoolOptionId": null,
+    "topologyUid": "arkm2wowvuv8oludj9sk3taoq",
+    "topologyVersionUid": "8pzn28z8tpwd8o8wsacn3v5y8",
+    "expand": {
+        "expandable": "sharedwith",
+        "sharedWith": [{"userId": "irmohame", "fullName": "Irfan Zaffarulla"}, {
+            "userId": "brebouch",
+            "fullName": "Brennan Bouchard"
+        }, {"userId": "caroldso", "fullName": "Carol Trincia Dsouza"}, {"userId": "thiachan", "fullName": "Alex Chan"}]
+    },
+    "eventOwner": false
+}]

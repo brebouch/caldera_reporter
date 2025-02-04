@@ -35,7 +35,7 @@ Setup
     API_TOKEN=your_api_token_here
     DEBUG=True
 
-3.  Ensure your Caldera server base URL and API token are correctly set in `py_caldera.py`.
+2. Ensure your Caldera server base URL and API token are correctly set in `py_caldera.py`.
 
 Running the Application
 -----------------------
