@@ -4,72 +4,78 @@ Firewall Test Tool
 
 This application provides a web-based interface to manage and test operations using the Caldera platform. It supports running operations, checking their status, and generating reports.
 
-Features
---------
 
-*   Run and manage operations against a Caldera server.
-*   Generate HTML reports of operations.
-*   Reset the application state by removing test files.
+This project sets up a Flask application served by Gunicorn and proxied by Nginx. The setup uses Docker for containerization, enabling easy deployment and scalability. Environment variables configure the application at runtime.
 
-Requirements
-------------
+### Project Structure
 
-*   Python 3.x
-*   Flask
-*   pydantic
-*   requests
-*   flask-cors
-*   dotenv
-*   json2html
+* app.py: The main Flask application file.
+* requirements.txt: Lists the Python dependencies.
+* Dockerfile: Builds the Docker image for the Flask app.
+* nginx.conf: Nginx configuration file for reverse proxy setup.
+* docker-compose.yml: Defines the multi-container setup for the Flask app and Nginx.
+* .env: A file to store environment variables.
 
-Installation
-------------
 
-    pip install flask pydantic requests flask-cors python-dotenv json2html
+### Prerequisites
 
-Setup
------
+    Docker: Ensure Docker is installed on your system. You can download it from Docker's official site.
+    Docker Compose: Make sure Docker Compose is installed. It's included with Docker Desktop for Windows and Mac.
 
-1.  Create a `.env` file in the root directory and add your configuration variables:
 
-    API_TOKEN=your_api_token_here
-    DEBUG=True
+### Setup Instructions
 
-2. Ensure your Caldera server base URL and API token are correctly set in `py_caldera.py`.
+**Clone the Repository**
 
-Running the Application
------------------------
+* git clone <repository-url> cd <repository-folder>
 
-    python app.py
+**Create an .env File**
 
-This will start the Flask server on `http://localhost:5005`.
+Create a .env file in the root directory of the project with the following content:
 
-Usage
------
+    API_TOKEN=CALDERA_API_TOKEN
+    CALDERA_SERVER=http://CALDERA_SERVER_IP_OR_HOSTNAME
+    ADVERSARY_ID=ADVERSARY_ID
 
-Access the application via your browser at `http://localhost:5005`. From the interface, you can initiate new operations, check their status, and view reports.
+**Build and Run the Docker Containers**
 
-API Endpoints
--------------
+Use Docker Compose to build and start the services:
 
-*   `GET /api/operation/<operation_id>` - Retrieve the status of a specific operation.
-*   `POST /api/operation` - Start a new operation.
-*   `GET /api/operation` - List all operations.
-*   `GET /api/reset` - Reset the application state.
+* docker-compose up --build
 
-Project Structure
------------------
+This command starts the containers and maps port 80 on the host to Nginx.
 
-*   `app.py` - Main Flask application file.
-*   `py_caldera.py` - Module for interacting with the Caldera API.
-*   `static/` - Directory containing static files served by Flask.
 
-Contributing
-------------
+### Accessing the Application
 
-Contributions are welcome. Please fork the repository and submit a pull request for any improvements.
+Once the containers are running, you can access the application by navigating to http://localhost in your web browser.
 
-License
--------
+* API Endpoints: Requests are proxied to the Flask application by Nginx.
+* Static Content: Nginx serves static content as configured in nginx.conf.
 
-This project is licensed under the MIT License.
+
+### Key Components
+
+    Flask: A micro web framework for Python, used to create the application.
+    Gunicorn: A Python WSGI HTTP server, used to serve the Flask app.
+    Nginx: A high-performance HTTP server and reverse proxy, used to handle incoming requests and proxy them to Gunicorn.
+    Docker: Containerization platform to bundle and run the application.
+    Docker Compose: Tool for defining and running multi-container Docker applications.
+
+
+### Customization
+
+    Nginx Configuration: Modify nginx.conf to change proxy settings or add new rules.
+    Environment Variables: Update the .env file to change application configurations.
+
+
+### Troubleshooting
+
+* Check Logs: Use docker-compose logs to view logs from the running services.
+* Health Checks: Ensure the Flask app is healthy and responding to requests.
+* Network Issues: Confirm that Docker Compose services are correctly networked.
+
+
+### License
+
+This project is licensed under the MIT License. See the LICENSE file for details.

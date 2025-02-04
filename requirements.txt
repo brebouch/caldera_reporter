@@ -5,3 +5,6 @@ ordereddict==1.1
 simplejson==3.19.3
 unicode==2.9
 pymongo==4.10.1
+flask-cors
+pydantic
+gunicorn
